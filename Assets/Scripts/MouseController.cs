@@ -55,10 +55,10 @@ public class MouseController : MonoBehaviour
     }
     
     private void DisplayCoinsCount(){
-        Rect coinIconRect = new Rect(10, 10, 32, 32);
+        Rect coinIconRect = new Rect(20, 20, 42, 42);
         GUI.DrawTexture(coinIconRect, coinIconTexture);
         GUIStyle style =new GUIStyle();
-        style.fontSize = 30;
+        style.fontSize = 60;
         style.fontStyle = FontStyle.Bold;
         style.normal.textColor = Color.yellow;
 
