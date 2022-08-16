@@ -1,22 +1,24 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class MouseController : MonoBehaviour
 {
-    [SerializeField]
-    private float jetpackForce = 75.0f;
-    [SerializeField]
-    private float movementSpeed = 3.0f;
-    [SerializeField]
-    private Texture2D coinIconTexture;
-    [SerializeField] 
-    private GroundChecker groundChecker;
-    [SerializeField]
-    private ParticleSystem jetpack;
-    [SerializeField]
-    private ParallaxScroll parallax;
+    [SerializeField] private float jetpackForce = 75.0f;
+    [SerializeField] private float movementSpeed = 3.0f;
+    [SerializeField] private Texture2D coinIconTexture;
+    [SerializeField] private GroundChecker groundChecker;
+    [SerializeField] private ParticleSystem jetpack;
+    [SerializeField] private ParallaxScroll parallax;
+    [SerializeField] private GameObject deathScreen;
+    [SerializeField] private GameObject tweenScreen;
+    [SerializeField] private AudioClip coinCollectSound;
+    [SerializeField] private Camera mainCamera;
+    [SerializeField] private AudioSource jetpackAudio;
+    [SerializeField] private AudioSource footstepsAudio;
     
     private Rigidbody2D _rigidbody2D;
     private bool dead = false;
@@ -31,6 +33,12 @@ public class MouseController : MonoBehaviour
         groundChecker = GetComponentInChildren<GroundChecker>();
         _animator = GetComponent<Animator>();
        
+    }
+
+    private void Start()
+    {
+        mainCamera.GetComponent<AudioSource>().volume = GlobalSettings.GetVolume();
+        mainCamera.GetComponent<AudioSource>().mute = GlobalSettings.GetMute();
     }
 
     // Update is called once per frame
@@ -51,9 +59,38 @@ public class MouseController : MonoBehaviour
         }
         UpdateGroundedStatus();
         AdjustJetpack(jetpackActive);
+        AdjustFootstepsAndJetpackSound(jetpackActive);
         parallax.offset = transform.position.x;
     }
-    
+    private void AdjustFootstepsAndJetpackSound(bool jetpackActive)
+    {
+        var isGround = groundChecker.IsGrounded();
+        if (GlobalSettings.GetMute() == false)
+        {
+            footstepsAudio.volume = GlobalSettings.GetVolume();
+        }
+        else
+        {
+            footstepsAudio.mute = GlobalSettings.GetMute();
+        }
+        
+        
+        footstepsAudio.enabled = !dead && isGround;
+        jetpackAudio.enabled = !dead && !isGround;
+        if (jetpackActive && GlobalSettings.GetMute() == false)
+        {
+            
+            jetpackAudio.volume = GlobalSettings.GetVolume();
+            
+        }else if(jetpackActive && GlobalSettings.GetMute() == true)
+        {
+            jetpackAudio.mute = GlobalSettings.GetMute();
+        }
+        else
+        {
+            jetpackAudio.volume = 0.1f;
+        }
+    }
     private void DisplayCoinsCount(){
         Rect coinIconRect = new Rect(20, 20, 42, 42);
         GUI.DrawTexture(coinIconRect, coinIconTexture);
@@ -75,6 +112,11 @@ public class MouseController : MonoBehaviour
         coins++;
 
         Destroy(coinCollider.gameObject);
+        if (GlobalSettings.GetMute() == false)
+        {
+            AudioSource.PlayClipAtPoint(coinCollectSound, transform.position, GlobalSettings.GetVolume());
+        }
+
     }
 
     private void OnTriggerEnter2D(Collider2D collider)
@@ -95,8 +137,13 @@ public class MouseController : MonoBehaviour
         {
             if (!isHit) {
                 isHit = true;
+                var laserZap = laserCollider.gameObject.GetComponent<AudioSource>();
+                laserZap.volume = GlobalSettings.GetVolume(); 
+                laserZap.mute = GlobalSettings.GetMute();
+                laserZap.Play();
                 dead = true;
                 _animator.SetBool("dead", true);
+                deathScreen.transform.DOMoveY(tweenScreen.transform.position.y, 1f);
             }
             if (isHit)
             {
